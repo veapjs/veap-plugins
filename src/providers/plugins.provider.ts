@@ -1,22 +1,20 @@
 import { isDatabaseInitialized } from "@veap/database";
 import { IntlService } from "@veap/intl/server";
-import {
-  APP_PLUGINS,
-  eventBus,
-  ROUTER_SERVICE,
-  ServiceProvider,
-  SITE_LAYOUT,
-} from "@veap/kernel";
+import { eventBus, ServiceProvider } from "@veap/kernel";
 import type * as React from "react";
-import { bindPluginsContext } from "../common/context";
-import { runPluginMigrations } from "../migrations";
-import { NavigationService } from "../navigation/navigation.service";
-import { MIGRATION_RUNNER, PLUGIN_REPOSITORY } from "../registry/contracts";
-import { ensurePluginsInitialized, registerPlugins } from "../registry/facade";
-import { KnexMigrationRunner } from "../registry/migration-runner";
-import { ActiveRecordPluginRepository } from "../registry/plugin.repository";
-import { PluginRegistry } from "../registry/registry.service";
-import { RouterService } from "../router/router.service";
+import { bindPluginsContext } from "../common/context.js";
+import { APP_PLUGINS, ROUTER_SERVICE, SITE_LAYOUT } from "../common/tokens.js";
+import { runPluginMigrations } from "../migrations/index.js";
+import { NavigationService } from "../navigation/navigation.service.js";
+import { MIGRATION_RUNNER, PLUGIN_REPOSITORY } from "../registry/contracts.js";
+import {
+  ensurePluginsInitialized,
+  registerPlugins,
+} from "../registry/facade.js";
+import { KnexMigrationRunner } from "../registry/migration-runner.js";
+import { ActiveRecordPluginRepository } from "../registry/plugin.repository.js";
+import { PluginRegistry } from "../registry/registry.service.js";
+import { RouterService } from "../router/router.service.js";
 
 export interface PluginsConfig {
   plugins?: any[];

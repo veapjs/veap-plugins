@@ -3,6 +3,7 @@
  * @description Virtual Router API for Veap Plugin system.
  */
 
+export { ROUTER_SERVICE, SITE_LAYOUT } from "../common/tokens.js";
 export {
   addRouteRewrite,
   buildRouteTree,
@@ -10,9 +11,9 @@ export {
   getPluginsWithHomepage,
   getRouteRewrites,
   matchRoute,
-} from "./discovery";
-export { handleVeapApiRequest } from "./handler";
-export { matchRoute as matchVirtualRoute } from "./matcher";
+} from "./discovery.js";
+export { handleVeapApiRequest } from "./handler.js";
+export { matchRoute as matchVirtualRoute } from "./matcher.js";
 export {
   ApiEnsuredAuth,
   ApiSameOrigin,
@@ -23,14 +24,14 @@ export {
   runPipeline,
   SameOrigin,
   SkipSecurity,
-} from "./middlewares";
+} from "./middlewares.js";
 export {
   RouterErrorBoundary,
   SoftNavigationInterceptor,
   VeapRouter,
   type WithRouterConfig,
   withRouter,
-} from "./react";
+} from "./react/index.js";
 export {
   extractParamName,
   isCatchAllSegment,
@@ -44,15 +45,15 @@ export {
   RouteTree,
   resolveMagicPrefix,
   segmentMatchesUrlPart,
-} from "./route-tree";
-export { RouterService } from "./router.service";
+} from "./route-tree.js";
+export { RouterService } from "./router.service.js";
 export {
   discoverRoutes,
   generateRouteManifest,
   globToTree,
-} from "./scanner";
+} from "./scanner.js";
 export {
   collectApiMiddlewares,
   collectAuthRequirements,
   collectMiddlewares,
-} from "./utils";
+} from "./utils.js";

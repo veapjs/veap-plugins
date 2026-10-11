@@ -59,10 +59,14 @@ describe("Pipeline Execution", () => {
       return res;
     };
 
-    const result = await runPipeline([m1, m2], { path: "/" }, async () => {
-      executionOrder.push("final");
-      return "PAGE_CONTENT";
-    });
+    const result = await runPipeline(
+      [m1, m2],
+      { path: "/", searchParams: null, params: null },
+      async () => {
+        executionOrder.push("final");
+        return "PAGE_CONTENT";
+      },
+    );
 
     expect(result).toBe("PAGE_CONTENT");
     expect(executionOrder).toEqual([
@@ -82,7 +86,11 @@ describe("Pipeline Execution", () => {
     const m2: VeapMiddleware = vi.fn();
     const final = vi.fn();
 
-    const result = await runPipeline([m1, m2], { path: "/" }, final);
+    const result = await runPipeline(
+      [m1, m2],
+      { path: "/", searchParams: null, params: null },
+      final,
+    );
 
     expect(result).toBe("SHORT_CIRCUIT");
     expect(m2).not.toHaveBeenCalled();
@@ -99,7 +107,10 @@ describe("EnsuredGuest Middleware", () => {
     mockGetCurrentSession.mockResolvedValue({ user: null, session: null });
     const next = vi.fn().mockResolvedValue("OK");
 
-    const result = await EnsuredGuest({ path: "/login" }, next);
+    const result = await EnsuredGuest(
+      { path: "/login", searchParams: null, params: null },
+      next,
+    );
 
     expect(next).toHaveBeenCalled();
     expect(result).toBe("OK");
@@ -115,7 +126,10 @@ describe("EnsuredGuest Middleware", () => {
 
     const next = vi.fn();
 
-    await EnsuredGuest({ path: "/login" }, next);
+    await EnsuredGuest(
+      { path: "/login", searchParams: null, params: null },
+      next,
+    );
 
     expect(next).not.toHaveBeenCalled();
     expect(mockRedirect).toHaveBeenCalledWith("/");
@@ -131,7 +145,10 @@ describe("EnsuredUser Middleware", () => {
     mockGetCurrentSession.mockResolvedValue({ user: null, session: null });
     const next = vi.fn();
 
-    await EnsuredUser({ path: "/dashboard" }, next);
+    await EnsuredUser(
+      { path: "/dashboard", searchParams: null, params: null },
+      next,
+    );
 
     expect(next).not.toHaveBeenCalled();
     expect(mockRedirect).toHaveBeenCalledWith("/auth/signin");
@@ -144,7 +161,14 @@ describe("EnsuredUser Middleware", () => {
     });
     const next = vi.fn().mockResolvedValue("DASHBOARD");
 
-    const result = await EnsuredUser({ path: "/dashboard" }, next);
+    const result = await EnsuredUser(
+      {
+        path: "/dashboard",
+        searchParams: null,
+        params: null,
+      },
+      next,
+    );
 
     expect(next).toHaveBeenCalled();
     expect(result).toBe("DASHBOARD");
@@ -170,6 +194,8 @@ describe("EnsuredAuth Middleware", () => {
     const ctx: VeapMiddlewareContext = {
       path: "/admin",
       roles: ["admin"],
+      searchParams: null,
+      params: null,
     };
 
     await EnsuredAuth(ctx, next);
@@ -198,6 +224,8 @@ describe("EnsuredAuth Middleware", () => {
     const ctx: VeapMiddlewareContext = {
       path: "/admin",
       roles: ["admin"],
+      searchParams: null,
+      params: null,
     };
 
     const result = await EnsuredAuth(ctx, next);

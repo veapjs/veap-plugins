@@ -61,7 +61,7 @@ class InMemoryPluginRepository implements IPluginRepository {
       enabled: data.enabled ?? existing.enabled,
       config: data.config ?? existing.config,
       installedVersion: data.installedVersion ?? existing.installedVersion,
-      updatedAt: new Date(),
+      updated_at: new Date(),
     };
     this.records.set(id, updated);
     return updated;

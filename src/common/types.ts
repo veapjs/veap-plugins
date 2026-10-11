@@ -1,7 +1,17 @@
 import type { UserPermission, UserRole } from "@veap/auth";
-import type { SystemEvent } from "@veap/kernel";
+import type { VeapConfig as _VeapConfig, SystemEvent } from "@veap/kernel";
 
 export type { SystemEvent };
+
+declare module "@veap/kernel" {
+  interface VeapConfig {
+    /**
+     * Prefix for all administrative routes.
+     * Default: "/app"
+     */
+    privatePath?: string;
+  }
+}
 
 import type * as React from "react";
 import { z } from "zod";
@@ -63,8 +73,7 @@ export interface PluginManifest {
 }
 
 /**
- * Shape of the `veap` field in a plugin `package.json`.
- * This replaces the standalone `manifest.json` file.
+ * Shape of the `veap` field in a plugin `package.json`.\n * This replaces the standalone `manifest.json` file.
  */
 export interface VeapPackageMetadata {
   type?: string;
@@ -93,8 +102,7 @@ export interface VeapPackageJson {
 }
 
 /**
- * Helper to build a `PluginManifest` from a `package.json` import.
- * Eliminates the need for a standalone `manifest.json` file.
+ * Helper to build a `PluginManifest` from a `package.json` import.\n * Eliminates the need for a standalone `manifest.json` file.
  *
  * @example
  * ```ts

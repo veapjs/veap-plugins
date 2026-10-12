@@ -1,5 +1,13 @@
 # @veap/plugins
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @veap/kernel@0.1.3
+  - @veap/intl@0.1.3
+
 ## 0.1.3
 
 ### Patch Changes

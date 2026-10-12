@@ -1,7 +1,11 @@
 import { checkSecurity, getAuthRoutes, getCurrentSession } from "@veap/auth";
-import { AppError, verifySameOrigin } from "@veap/kernel";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import {
+  AppError,
+  app,
+  type IHttpRequestContext,
+  REQUEST_CONTEXT,
+  verifySameOrigin,
+} from "@veap/kernel";
 import type {
   ApiMiddleware,
   VeapMiddleware,
@@ -12,14 +16,14 @@ export const EnsuredGuest: VeapMiddleware = async (ctx, next) => {
   const { user, session } = await getCurrentSession();
 
   if (user && session) {
-    const headersList = await headers();
-    const referer = headersList.get("referer");
+    const requestContext = await app<IHttpRequestContext>(REQUEST_CONTEXT);
+    const referer = await requestContext.getHeader("referer");
 
     if (referer && !referer.includes(ctx.path)) {
-      return redirect(referer);
+      return requestContext.redirect(referer);
     }
 
-    return redirect("/");
+    return requestContext.redirect("/");
   }
 
   return await next();
@@ -30,7 +34,8 @@ export const EnsuredUser: VeapMiddleware = async (_ctx, next) => {
 
   if (!user || !session) {
     const authRoutes = getAuthRoutes();
-    return redirect(authRoutes.signIn);
+    const requestContext = await app<IHttpRequestContext>(REQUEST_CONTEXT);
+    return requestContext.redirect(authRoutes.signIn);
   }
 
   return await next();
@@ -54,7 +59,8 @@ export const EnsuredAuth: VeapMiddleware = async (ctx, next) => {
   const authRoutes = getAuthRoutes();
 
   if (!user || !session) {
-    return redirect(authRoutes.signIn);
+    const requestContext = await app<IHttpRequestContext>(REQUEST_CONTEXT);
+    return requestContext.redirect(authRoutes.signIn);
   }
 
   const security = await checkSecurity(
@@ -67,7 +73,8 @@ export const EnsuredAuth: VeapMiddleware = async (ctx, next) => {
   );
 
   if (!security.satisfied) {
-    return redirect(security.redirect || authRoutes.signIn);
+    const requestContext = await app<IHttpRequestContext>(REQUEST_CONTEXT);
+    return requestContext.redirect(security.redirect || authRoutes.signIn);
   }
 
   return await next();
@@ -117,13 +124,30 @@ export const ApiEnsuredAuth: ApiMiddleware = async (
  * Throws AppError.Forbidden if request originates from an untrusted origin.
  */
 export const SameOrigin: VeapMiddleware = async (_ctx, next) => {
-  const headersList = await headers();
-  const origin = headersList.get("origin");
-  const secFetchSite = headersList.get("sec-fetch-site");
-  const secFetchMode = headersList.get("sec-fetch-mode");
+  const requestContext = await app<IHttpRequestContext>(REQUEST_CONTEXT);
+  const origin = await requestContext.getHeader("origin");
+  const secFetchSite = await requestContext.getHeader("sec-fetch-site");
+  const secFetchMode = await requestContext.getHeader("sec-fetch-mode");
 
   if (origin || (secFetchSite && secFetchMode !== "navigate")) {
-    if (!verifySameOrigin({ headers: headersList, method: "POST" })) {
+    const host = await requestContext.getHeader("host");
+    const xForwardedHost = await requestContext.getHeader("x-forwarded-host");
+    const headersMap = new Map<string, string | null>([
+      ["origin", origin],
+      ["sec-fetch-site", secFetchSite],
+      ["sec-fetch-mode", secFetchMode],
+      ["host", host],
+      ["x-forwarded-host", xForwardedHost],
+    ]);
+
+    const requestLike = {
+      headers: {
+        get: (name: string) => headersMap.get(name.toLowerCase()) ?? null,
+      },
+      method: "POST",
+    };
+
+    if (!verifySameOrigin(requestLike)) {
       throw AppError.Forbidden("Cross-origin request rejected");
     }
   }

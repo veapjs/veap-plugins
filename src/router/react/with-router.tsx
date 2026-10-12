@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { app, type IHttpRequestContext, REQUEST_CONTEXT } from "@veap/kernel";
 import * as React from "react";
 import { buildRouteTree } from "../discovery";
 import { VeapRouter } from "./renderer";
@@ -39,8 +39,12 @@ export function withRouter(
     let routePath = config.path;
 
     if (!routePath) {
-      const headersList = await headers();
-      routePath = headersList.get("x-invoke-path") || "/";
+      try {
+        const requestContext = await app<IHttpRequestContext>(REQUEST_CONTEXT);
+        routePath = (await requestContext.getHeader("x-invoke-path")) || "/";
+      } catch (_e) {
+        routePath = "/";
+      }
     }
 
     const tree = await buildRouteTree(true);

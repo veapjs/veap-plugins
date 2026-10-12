@@ -1,15 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import * as React from "react";
+
+export interface SoftNavigationInterceptorProps {
+  children: React.ReactNode;
+  onNavigate?: (href: string) => void;
+}
 
 export function SoftNavigationInterceptor({
   children,
-}: {
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
-
+  onNavigate,
+}: SoftNavigationInterceptorProps) {
   React.useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       // Ignore clicks with modifiers
@@ -32,16 +33,24 @@ export function SoftNavigationInterceptor({
       if (
         href?.startsWith("/") &&
         !href.startsWith("//") &&
-        anchor.target !== "_blank"
+        anchor.target !== "_blank" &&
+        !anchor.hasAttribute("download") &&
+        anchor.getAttribute("rel") !== "external"
       ) {
-        e.preventDefault();
-        router.push(href);
+        if (onNavigate) {
+          e.preventDefault();
+          onNavigate(href);
+        } else if (typeof window !== "undefined") {
+          e.preventDefault();
+          window.history.pushState(null, "", href);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
       }
     };
 
     document.addEventListener("click", handleClick);
     return () => document.removeEventListener("click", handleClick);
-  }, [router]);
+  }, [onNavigate]);
 
   return <>{children}</>;
 }

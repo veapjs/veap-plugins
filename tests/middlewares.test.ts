@@ -1,5 +1,6 @@
 process.env.ENCRYPTION_KEY = "MDEyMzQ1Njc4OWFiY2RlZg==";
 
+import { app, type IHttpRequestContext, REQUEST_CONTEXT } from "@veap/kernel";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ApiMiddleware,
@@ -19,14 +20,12 @@ import {
 } from "../src/router/middlewares";
 
 const mockRedirect = vi.fn();
-vi.mock("next/navigation", () => ({
-  redirect: (url: string) => mockRedirect(url),
-}));
+const mockGetHeader = vi.fn();
 
-const mockHeaders = vi.fn();
-vi.mock("next/headers", () => ({
-  headers: () => mockHeaders(),
-}));
+const mockRequestContext: IHttpRequestContext = {
+  getHeader: (name: string) => mockGetHeader(name),
+  redirect: ((url: string) => mockRedirect(url)) as any,
+};
 
 const mockGetCurrentSession = vi.fn();
 const mockCheckSecurity = vi.fn();
@@ -101,6 +100,12 @@ describe("Pipeline Execution", () => {
 describe("EnsuredGuest Middleware", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    app().clear();
+    app().register({
+      token: REQUEST_CONTEXT,
+      useValue: mockRequestContext,
+      singleton: true,
+    });
   });
 
   it("calls next() when user is not logged in", async () => {
@@ -122,7 +127,7 @@ describe("EnsuredGuest Middleware", () => {
       user: { id: "1" },
       session: { id: "s1" },
     });
-    mockHeaders.mockResolvedValue(new Headers());
+    mockGetHeader.mockResolvedValue(null);
 
     const next = vi.fn();
 
@@ -134,11 +139,38 @@ describe("EnsuredGuest Middleware", () => {
     expect(next).not.toHaveBeenCalled();
     expect(mockRedirect).toHaveBeenCalledWith("/");
   });
+
+  it("redirects to referer when referer is outside current path", async () => {
+    mockGetCurrentSession.mockResolvedValue({
+      user: { id: "1" },
+      session: { id: "s1" },
+    });
+    mockGetHeader.mockImplementation(async (name: string) => {
+      if (name.toLowerCase() === "referer") return "/dashboard";
+      return null;
+    });
+
+    const next = vi.fn();
+
+    await EnsuredGuest(
+      { path: "/login", searchParams: null, params: null },
+      next,
+    );
+
+    expect(next).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith("/dashboard");
+  });
 });
 
 describe("EnsuredUser Middleware", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    app().clear();
+    app().register({
+      token: REQUEST_CONTEXT,
+      useValue: mockRequestContext,
+      singleton: true,
+    });
   });
 
   it("redirects to signIn when user is not logged in", async () => {
@@ -179,6 +211,12 @@ describe("EnsuredUser Middleware", () => {
 describe("EnsuredAuth Middleware", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    app().clear();
+    app().register({
+      token: REQUEST_CONTEXT,
+      useValue: mockRequestContext,
+      singleton: true,
+    });
   });
 
   it("checks RBAC security and redirects if not satisfied", async () => {
@@ -236,6 +274,78 @@ describe("EnsuredAuth Middleware", () => {
   });
 });
 
+describe("SameOrigin Middleware", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app().clear();
+    app().register({
+      token: REQUEST_CONTEXT,
+      useValue: mockRequestContext,
+      singleton: true,
+    });
+  });
+
+  it("calls next() for simple GET navigation without origin header", async () => {
+    mockGetHeader.mockResolvedValue(null);
+    const next = vi.fn().mockResolvedValue("OK");
+
+    const result = await SameOrigin(
+      { path: "/profile", searchParams: null, params: null },
+      next,
+    );
+
+    expect(next).toHaveBeenCalled();
+    expect(result).toBe("OK");
+  });
+
+  it("throws AppError.Forbidden when origin does not match host", async () => {
+    mockGetHeader.mockImplementation(async (name: string) => {
+      switch (name.toLowerCase()) {
+        case "origin":
+          return "http://evil.com";
+        case "host":
+          return "localhost:3000";
+        default:
+          return null;
+      }
+    });
+
+    const next = vi.fn();
+
+    await expect(
+      SameOrigin(
+        { path: "/api/action", searchParams: null, params: null },
+        next,
+      ),
+    ).rejects.toThrow("Cross-origin request rejected");
+
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("calls next() when origin matches host", async () => {
+    mockGetHeader.mockImplementation(async (name: string) => {
+      switch (name.toLowerCase()) {
+        case "origin":
+          return "http://localhost:3000";
+        case "host":
+          return "localhost:3000";
+        default:
+          return null;
+      }
+    });
+
+    const next = vi.fn().mockResolvedValue("SAME_ORIGIN_OK");
+
+    const result = await SameOrigin(
+      { path: "/api/action", searchParams: null, params: null },
+      next,
+    );
+
+    expect(next).toHaveBeenCalled();
+    expect(result).toBe("SAME_ORIGIN_OK");
+  });
+});
+
 describe("SkipSecurity Middleware", () => {
   it("marks context with __skipSecurity and calls next()", async () => {
     const ctx: any = { path: "/setup-2fa" };
@@ -274,5 +384,41 @@ describe("ApiEnsuredAuth Middleware", () => {
 
     expect(next).toHaveBeenCalled();
     expect(await res.text()).toBe("API_OK");
+  });
+});
+
+describe("ApiSameOrigin Middleware", () => {
+  it("returns 403 response on cross-origin request", async () => {
+    const req = new Request("http://localhost:3000/api/mutation", {
+      method: "POST",
+      headers: {
+        origin: "http://malicious.com",
+        host: "localhost:3000",
+      },
+    });
+    const next = vi.fn();
+
+    const res = await ApiSameOrigin(req, { path: "/api/mutation" }, next);
+
+    expect(res.status).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+    const data = await res.json();
+    expect(data.error).toContain("Cross-origin request rejected");
+  });
+
+  it("calls next() on same-origin request", async () => {
+    const req = new Request("http://localhost:3000/api/mutation", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost:3000",
+        host: "localhost:3000",
+      },
+    });
+    const next = vi.fn().mockResolvedValue(new Response("OK"));
+
+    const res = await ApiSameOrigin(req, { path: "/api/mutation" }, next);
+
+    expect(res.status).toBe(200);
+    expect(next).toHaveBeenCalled();
   });
 });

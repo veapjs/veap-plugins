@@ -1,6 +1,6 @@
 {
   "name": "@veap/plugins",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Plugin lifecycle, extension points, and virtual router for Veap",
   "bugs": "https://github.com/veapjs/veap-plugins/issues",
   "repository": {
@@ -68,7 +68,6 @@
     "@iconify/react": "^6.0.2",
     "@veap/ui": "^0.1.0",
     "lucide-react": "^1.55.0",
-    "next": "^16",
     "react": "^19",
     "react-dom": "^19",
     "sonner": "^2.0.8"
@@ -81,9 +80,6 @@
       "optional": true
     },
     "lucide-react": {
-      "optional": true
-    },
-    "next": {
       "optional": true
     },
     "react": {

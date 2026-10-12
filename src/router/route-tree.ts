@@ -25,7 +25,27 @@
  */
 
 import type { UserPermission, UserRole } from "@veap/auth";
-import type { Metadata } from "next";
+/**
+ * Framework-agnostic metadata shape for route nodes.
+ * Compatible with Next.js Metadata and standard HTML meta tags.
+ */
+export interface VeapMetadata {
+  title?: string | { default: string; template?: string; absolute?: string };
+  description?: string;
+  keywords?: string | string[];
+  authors?: Array<{ name?: string; url?: string }>;
+  creator?: string;
+  publisher?: string;
+  robots?: any;
+  icons?: any;
+  openGraph?: any;
+  twitter?: any;
+  alternates?: any;
+  other?: Record<string, string | number | (string | number)[]>;
+  [key: string]: any;
+}
+
+export type Metadata = VeapMetadata;
 import type * as React from "react";
 import type {
   ApiMiddleware,

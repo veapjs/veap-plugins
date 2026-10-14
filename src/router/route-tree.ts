@@ -46,6 +46,7 @@ export interface VeapMetadata {
 }
 
 export type Metadata = VeapMetadata;
+
 import type * as React from "react";
 import type {
   ApiMiddleware,

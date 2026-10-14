@@ -5,11 +5,14 @@ import type { IMigrationRunner } from "./contracts";
  * `IMigrationRunner` adapter delegating to the knex-based migration runner.
  */
 export class KnexMigrationRunner implements IMigrationRunner {
-  run(scope: string, migrations: any[]): Promise<void> {
-    return runMigrations(scope, migrations);
+  // The knex runner reports the batch it applied; the port only promises that
+  // the run finished, so the summary is dropped here on purpose.
+  async run(scope: string, migrations: any[]): Promise<void> {
+    await runMigrations(scope, migrations);
   }
 
-  rollback(scope: string, migrations: any[]): Promise<void> {
-    return rollbackMigrations(scope, migrations);
+  // Same here: the runner reports what it undid, the port stays `void`.
+  async rollback(scope: string, migrations: any[]): Promise<void> {
+    await rollbackMigrations(scope, migrations);
   }
 }

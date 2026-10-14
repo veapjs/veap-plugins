@@ -1,5 +1,17 @@
 # @veap/plugins
 
+## 0.1.5
+
+### Patch Changes
+
+- Keep the plugin migration adapter in sync with the migration runner's results.
+  
+  - `KnexMigrationRunner.run()` and `rollback()` now await `runMigrations()` and `rollbackMigrations()`. Both report what they did (`{ scope, ran, batch }` / `{ scope, rolledBack }`) for the `veap migrate` and `veap migrate:rollback` commands, so returning their promise directly no longer type-checks against `IMigrationRunner`; the port itself still resolves to `void`, and the summary is dropped on purpose.
+- Updated dependencies []:
+  - @veap/database@0.1.2
+  - @veap/kernel@0.1.4
+  - @veap/intl@0.1.4
+
 ## 0.1.4
 
 ### Patch Changes

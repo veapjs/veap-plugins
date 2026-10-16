@@ -26,7 +26,7 @@ without modifying core application code.
   via the integrated router service.
 - **Database persistence**: Storing plugin activation states and user widget
   layouts in database tables managed by `@veap/database`.
-- **IoC integration**: `PluginServiceProvider` boots and registers plugin
+- **IoC integration**: `PluginsServiceProvider` boots and registers plugin
   capabilities cleanly into the application container.
 
 ## Installation
@@ -46,21 +46,25 @@ npm install @veap/plugins @veap/kernel @veap/database @veap/auth
 
 ### Define a Custom Plugin
 
-Create a plugin definition implementing the Veap plugin contract:
+Create a plugin definition implementing the `IPlugin` contract:
 
 ```tsx
-import type { PluginDefinition } from "@veap/plugins";
+import type { IPlugin } from "@veap/plugins";
 
-export const AnalyticsPlugin: PluginDefinition = {
-  id: "com.example.analytics",
-  name: "Analytics Tracker",
-  version: "1.0.0",
-  description: "Injects telemetry script and admin dashboard widgets",
+export const AnalyticsPlugin: IPlugin = {
+  manifest: {
+    id: "com.example.analytics",
+    name: "Analytics Tracker",
+    version: "1.0.0",
+    description: "Injects telemetry script and admin dashboard widgets",
+    enabled: true,
+  },
 
   widgets: [
     {
       id: "analytics-overview",
-      title: "Visitor Traffic",
+      name: "Visitor Traffic",
+      area: "admin:dashboard",
       component: () => (
         <div className="p-4 border rounded">
           <p className="text-sm font-semibold">Active Visitors: 42</p>
@@ -69,24 +73,23 @@ export const AnalyticsPlugin: PluginDefinition = {
     },
   ],
 
-  async onActivate(container) {
-    console.log("Analytics plugin activated!");
+  async init() {
+    console.log("Analytics plugin initialized!");
   },
 };
 ```
 
 ### Register Plugins in Application Builder
 
-Pass plugins to `Application.configure()`:
+Pass plugins to `Application.configure()` via `PluginsServiceProvider`:
 
 ```ts
 import { Application } from "@veap/kernel";
-import { PluginServiceProvider } from "@veap/plugins";
+import { PluginsServiceProvider } from "@veap/plugins";
 import { AnalyticsPlugin } from "./plugins/analytics";
 
 export const app = Application.configure()
-  .use(PluginServiceProvider)
-  .withPlugins([AnalyticsPlugin])
+  .use((c) => new PluginsServiceProvider(c, { plugins: [AnalyticsPlugin] }))
   .create();
 ```
 
@@ -97,14 +100,14 @@ Use extension components from `@veap/plugins/client`:
 ```tsx
 "use client";
 
-import { ExtensionSlot } from "@veap/plugins/client";
+import { ExtensionPointClient } from "@veap/plugins/client";
 
 export function DashboardHeader() {
   return (
     <header className="flex justify-between items-center p-4">
       <h1>Admin Dashboard</h1>
       {/* External plugins can inject actions here */}
-      <ExtensionSlot name="dashboard:header:actions" />
+      <ExtensionPointClient target="dashboard:header" point="actions" />
     </header>
   );
 }
@@ -112,13 +115,15 @@ export function DashboardHeader() {
 
 ## Subpath Exports
 
-| Export Path                | Content                                                                    |
-| -------------------------- | -------------------------------------------------------------------------- |
-| `@veap/plugins`            | Core plugin definitions, lifecycle management, and `PluginServiceProvider` |
-| `@veap/plugins/client`     | React extension slots (`ExtensionSlot`) and widget renderers               |
-| `@veap/plugins/router`     | Virtual router infrastructure and route rewriting                          |
-| `@veap/plugins/models`     | Active Record models (`PluginModel`, `UserWidgetModel`)                    |
-| `@veap/plugins/migrations` | Knex migrations for plugin persistence                                     |
+| Export Path                | Content                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| `@veap/plugins`            | Core plugin definitions (`IPlugin`), lifecycle, and `PluginsServiceProvider` |
+| `@veap/plugins/server`     | Server-side `ExtensionPoint`, `WidgetArea`, and plugin registry utilities    |
+| `@veap/plugins/client`     | Client components (`ExtensionPointClient`, `WidgetAreaClient`)               |
+| `@veap/plugins/actions`    | Next.js Server Actions for plugin and widget management                      |
+| `@veap/plugins/router`     | Virtual router infrastructure (`PluginRouter`)                               |
+| `@veap/plugins/models`     | Active Record models (`SystemPlugin`, `SystemUserWidget`)                    |
+| `@veap/plugins/migrations` | Knex migrations for plugin persistence                                       |
 
 ## Documentation
 

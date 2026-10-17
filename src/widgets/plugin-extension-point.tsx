@@ -49,15 +49,16 @@ export async function PluginExtensionPoint({
   const userRoles = user?.roles || [];
   const userPermissions = user?.permissions || [];
 
-  const extensions = await pluginsContext().registry.getExtensions(
-    target,
-    point,
-    includeDisabled,
-    {
-      roles: userRoles,
-      permissions: userPermissions,
-    },
-  );
+  const ctx = pluginsContext();
+  const extensions = ctx.extensions?.getExtensions
+    ? await ctx.extensions.getExtensions(target, point, includeDisabled, {
+        roles: userRoles,
+        permissions: userPermissions,
+      })
+    : await ctx.registry.getExtensions(target, point, includeDisabled, {
+        roles: userRoles,
+        permissions: userPermissions,
+      });
 
   if (extensions.length === 0) return fallbackContent;
 

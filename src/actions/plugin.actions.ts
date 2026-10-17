@@ -14,7 +14,7 @@ export async function getPluginExtensionsAction(
   const userRoles = user?.roles || [];
   const userPermissions = user?.permissions || [];
 
-  return pluginsContext().registry.getExtensions(
+  return pluginsContext().extensions.getExtensions(
     target,
     point,
     includeDisabled,
@@ -30,7 +30,7 @@ export async function getPluginWidgetsAction(area: string) {
   const userRoles = user?.roles || [];
   const userPermissions = user?.permissions || [];
 
-  return pluginsContext().registry.getWidgets(area, {
+  return pluginsContext().widgets.getWidgets(area, {
     roles: userRoles,
     permissions: userPermissions,
   });

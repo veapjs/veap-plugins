@@ -1,11 +1,25 @@
 import { isDatabaseInitialized } from "@veap/database";
 import { IntlService } from "@veap/intl/server";
 import { eventBus, ServiceProvider } from "@veap/kernel";
+import type { CommandEntry } from "@veap/kernel/cli";
 import type * as React from "react";
+import { AddPluginCommand } from "../cli/commands/add-plugin.js";
+import { EjectPluginCommand } from "../cli/commands/eject-plugin.js";
+import { ListPluginsCommand } from "../cli/commands/list-plugins.js";
+import { MakePluginCommand } from "../cli/commands/make-plugin.js";
+import { PluginsSyncCommand } from "../cli/commands/plugins-sync.js";
+import { RemovePluginCommand } from "../cli/commands/remove-plugin.js";
 import { bindPluginsContext } from "../common/context.js";
-import { APP_PLUGINS, ROUTER_SERVICE, SITE_LAYOUT } from "../common/tokens.js";
+import {
+  APP_PLUGINS,
+  EXTENSION_SERVICE,
+  MENU_SERVICE,
+  ROUTER_SERVICE,
+  SITE_LAYOUT,
+  WIDGET_SERVICE,
+} from "../common/tokens.js";
 import { runPluginMigrations } from "../migrations/index.js";
-import { NavigationService } from "../navigation/navigation.service.js";
+import { MenuService } from "../navigation/navigation.service.js";
 import { MIGRATION_RUNNER, PLUGIN_REPOSITORY } from "../registry/contracts.js";
 import {
   ensurePluginsInitialized,
@@ -15,6 +29,8 @@ import { KnexMigrationRunner } from "../registry/migration-runner.js";
 import { ActiveRecordPluginRepository } from "../registry/plugin.repository.js";
 import { PluginRegistry } from "../registry/registry.service.js";
 import { RouterService } from "../router/router.service.js";
+import { ExtensionService } from "../widgets/extension.service.js";
+import { WidgetService } from "../widgets/widget.service.js";
 
 export interface PluginsConfig {
   plugins?: any[];
@@ -33,6 +49,21 @@ export class PluginsServiceProvider extends ServiceProvider {
   constructor(container: any, config?: PluginsConfig) {
     super(container);
     this.config = config;
+  }
+
+  /**
+   * Plugin management CLI commands harvested by the Veap console (`@veap/kernel/cli`):
+   * `list-plugins`, `add`, `remove`, `eject`, `make:plugin`, and `PluginsSyncCommand`.
+   */
+  commands(): CommandEntry[] {
+    return [
+      ListPluginsCommand,
+      AddPluginCommand,
+      RemovePluginCommand,
+      EjectPluginCommand,
+      MakePluginCommand,
+      PluginsSyncCommand,
+    ];
   }
 
   register(): void {
@@ -55,8 +86,41 @@ export class PluginsServiceProvider extends ServiceProvider {
     });
 
     this.container.register({
-      token: NavigationService,
-      useClass: NavigationService,
+      token: MenuService,
+      useClass: MenuService,
+      singleton: true,
+    });
+
+    this.container.register({
+      token: MENU_SERVICE,
+      useFactory: (c) => c.resolve(MenuService),
+      inject: [this.container.constructor as any],
+      singleton: true,
+    });
+
+    this.container.register({
+      token: WidgetService,
+      useClass: WidgetService,
+      singleton: true,
+    });
+
+    this.container.register({
+      token: WIDGET_SERVICE,
+      useFactory: (c) => c.resolve(WidgetService),
+      inject: [this.container.constructor as any],
+      singleton: true,
+    });
+
+    this.container.register({
+      token: ExtensionService,
+      useClass: ExtensionService,
+      singleton: true,
+    });
+
+    this.container.register({
+      token: EXTENSION_SERVICE,
+      useFactory: (c) => c.resolve(ExtensionService),
+      inject: [this.container.constructor as any],
       singleton: true,
     });
 
@@ -84,14 +148,19 @@ export class PluginsServiceProvider extends ServiceProvider {
   async boot(): Promise<void> {
     const registry =
       await this.container.resolve<PluginRegistry>(PluginRegistry);
-    const navigation =
-      await this.container.resolve<NavigationService>(NavigationService);
+    const menu = await this.container.resolve<MenuService>(MenuService);
+    const widgets = await this.container.resolve<WidgetService>(WidgetService);
+    const extensions =
+      await this.container.resolve<ExtensionService>(ExtensionService);
     const routerService =
       await this.container.resolve<RouterService>(RouterService);
 
     bindPluginsContext({
       registry,
-      navigation,
+      menu,
+      navigation: menu,
+      widgets,
+      extensions,
       router: routerService,
     });
 
@@ -167,6 +236,11 @@ export class PluginsServiceProvider extends ServiceProvider {
     if (pluginsToRegister?.length) {
       await registerPlugins(pluginsToRegister);
     }
+
+    // Under the console (`VEAP_CLI=1`), keep in-memory plugin definitions
+    // registered for inspection (e.g. `veap list-plugins`), but skip automatic
+    // database migrations and runtime initialization side effects.
+    if (process.env.VEAP_CLI === "1") return;
 
     // Automatically run plugin migrations if database is initialized and autoMigrate is not disabled
     if (this.config?.autoMigrate !== false && isDatabaseInitialized()) {

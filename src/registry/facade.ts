@@ -48,7 +48,11 @@ export const hasPluginHooks = async (point: string) => {
 };
 
 export const hasPluginExtension = async (target: string, point?: string) => {
-  return pluginsContext().registry.hasExtension(target, point);
+  const ctx = pluginsContext();
+  if (ctx.extensions?.hasExtension) {
+    return ctx.extensions.hasExtension(target, point);
+  }
+  return ctx.registry.hasExtension(target, point);
 };
 
 export const getPluginConfig = async <T = any>(id: string) => {

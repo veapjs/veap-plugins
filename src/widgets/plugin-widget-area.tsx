@@ -21,7 +21,7 @@ export async function PluginWidgetArea({
   const userRoles = user?.roles || [];
   const userPermissions = user?.permissions || [];
 
-  const widgets = await pluginsContext().registry.getWidgets(area, {
+  const widgets = await pluginsContext().widgets.getWidgets(area, {
     roles: userRoles,
     permissions: userPermissions,
   });

@@ -1,15 +1,20 @@
 import { AppError } from "@veap/kernel";
-import type { NavigationService } from "../navigation/navigation.service";
+import type { MenuService } from "../navigation/navigation.service";
 import type { PluginRegistry } from "../registry/registry.service";
 import type { RouterService } from "../router/router.service";
+import type { ExtensionService } from "../widgets/extension.service";
+import type { WidgetService } from "../widgets/widget.service";
 
 /**
  * Typed boundary between the plugins use cases and the modules that consume
- * them (facades, navigation, router, intl, presentation components).
+ * them (facades, menu/navigation, widgets, extensions, router, intl, presentation components).
  */
 export interface PluginsContext {
   registry: PluginRegistry;
-  navigation: NavigationService;
+  menu: MenuService;
+  navigation: MenuService;
+  widgets: WidgetService;
+  extensions: ExtensionService;
   router?: RouterService;
 }
 
@@ -20,8 +25,28 @@ const globalForPluginsContext = globalThis as unknown as {
 /**
  * Binds the resolved plugins services. Called once by the composition root.
  */
-export function bindPluginsContext(context: PluginsContext): void {
-  globalForPluginsContext.__VEAP_PLUGINS_CONTEXT__ = context;
+export function bindPluginsContext(
+  context: Omit<
+    PluginsContext,
+    "menu" | "navigation" | "widgets" | "extensions"
+  > & {
+    menu?: MenuService;
+    navigation?: MenuService;
+    widgets?: WidgetService;
+    extensions?: ExtensionService;
+  },
+): void {
+  const menu = (context.menu ?? context.navigation) as MenuService;
+  const widgets = (context.widgets ?? ({} as WidgetService)) as WidgetService;
+  const extensions = (context.extensions ??
+    ({} as ExtensionService)) as ExtensionService;
+  globalForPluginsContext.__VEAP_PLUGINS_CONTEXT__ = {
+    ...context,
+    menu,
+    navigation: menu,
+    widgets,
+    extensions,
+  };
 }
 
 /**

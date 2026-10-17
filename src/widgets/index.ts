@@ -1,3 +1,4 @@
+export { ExtensionService, getPluginExtensions } from "./extension.service";
 export {
   PathPrefixContext,
   usePathPrefix,
@@ -27,5 +28,6 @@ export {
   type ConfirmResult,
   useConfirmAction,
 } from "./use-confirm-action";
+export { getPluginWidgets, WidgetService } from "./widget.service";
 export { WidgetComposer } from "./widget-composer";
 export { WidgetComposerClient } from "./widget-composer-client";

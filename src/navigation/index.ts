@@ -5,5 +5,6 @@ export {
   getPluginNavigationGrouped,
   getPluginPathPrefix,
   getVeapPluginNavigationGrouped,
+  MenuService,
   NavigationService,
 } from "./navigation.service";

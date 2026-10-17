@@ -19,7 +19,7 @@ export async function WidgetComposer({
   const userRoles = user?.roles || [];
   const userPermissions = user?.permissions || [];
 
-  const defaultWidgetsRaw = await pluginsContext().registry.getWidgets(slot, {
+  const defaultWidgetsRaw = await pluginsContext().widgets.getWidgets(slot, {
     roles: userRoles,
     permissions: userPermissions,
   });

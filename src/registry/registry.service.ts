@@ -1,5 +1,7 @@
 import {
   AppError,
+  Container,
+  container as defaultContainer,
   EVENT_BUS,
   type IEventBus,
   type ILogger,
@@ -7,7 +9,15 @@ import {
   Injectable,
   LOGGER,
 } from "@veap/kernel";
-import type { IPlugin } from "../common";
+import {
+  EXTENSION_SERVICE,
+  type IPlugin,
+  MENU_SERVICE,
+  WIDGET_SERVICE,
+} from "../common";
+import type { MenuService } from "../navigation/navigation.service";
+import type { ExtensionService } from "../widgets/extension.service";
+import type { WidgetService } from "../widgets/widget.service";
 import {
   type IMigrationRunner,
   type IPluginRepository,
@@ -36,21 +46,103 @@ export class PluginRegistry {
     private readonly migrationRunner: IMigrationRunner,
     @Inject(LOGGER) private readonly logger: ILogger,
     @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
+    @Inject(Container)
+    private readonly iocContainer: Container = defaultContainer,
   ) {}
+
+  private async resolveMenuService(): Promise<MenuService | null> {
+    try {
+      if (this.iocContainer.has(MENU_SERVICE)) {
+        return await this.iocContainer.resolve<MenuService>(MENU_SERVICE);
+      }
+      const { MenuService: MenuServiceClass } = await import(
+        "../navigation/navigation.service"
+      );
+      if (this.iocContainer.has(MenuServiceClass)) {
+        return await this.iocContainer.resolve<MenuService>(MenuServiceClass);
+      }
+    } catch {}
+    return null;
+  }
+
+  private async resolveWidgetService(): Promise<WidgetService | null> {
+    try {
+      if (this.iocContainer.has(WIDGET_SERVICE)) {
+        return await this.iocContainer.resolve<WidgetService>(WIDGET_SERVICE);
+      }
+      const { WidgetService: WidgetServiceClass } = await import(
+        "../widgets/widget.service"
+      );
+      if (this.iocContainer.has(WidgetServiceClass)) {
+        return await this.iocContainer.resolve<WidgetService>(
+          WidgetServiceClass,
+        );
+      }
+    } catch {}
+    return null;
+  }
+
+  private async resolveExtensionService(): Promise<ExtensionService | null> {
+    try {
+      if (this.iocContainer.has(EXTENSION_SERVICE)) {
+        return await this.iocContainer.resolve<ExtensionService>(
+          EXTENSION_SERVICE,
+        );
+      }
+      const { ExtensionService: ExtensionServiceClass } = await import(
+        "../widgets/extension.service"
+      );
+      if (this.iocContainer.has(ExtensionServiceClass)) {
+        return await this.iocContainer.resolve<ExtensionService>(
+          ExtensionServiceClass,
+        );
+      }
+    } catch {}
+    return null;
+  }
+
+  private async invokePluginInit(plugin: IPlugin): Promise<void> {
+    if (!plugin.init) return;
+    const menuService = await this.resolveMenuService();
+    const widgetService = await this.resolveWidgetService();
+    const extensionService = await this.resolveExtensionService();
+
+    const executeInit = () => this.iocContainer.call(plugin, "init");
+
+    const withExtensions = extensionService
+      ? () =>
+          extensionService.runWithPluginContext(plugin.manifest.id, executeInit)
+      : executeInit;
+
+    const withWidgets = widgetService
+      ? () =>
+          widgetService.runWithPluginContext(plugin.manifest.id, withExtensions)
+      : withExtensions;
+
+    if (menuService) {
+      await menuService.runWithPluginContext(plugin.manifest.id, withWidgets);
+      return;
+    }
+
+    await withWidgets();
+  }
 
   /** Lookup a plugin by id, falling back to the npm-name form. */
   private findPlugin(id: string): IPlugin | undefined {
     return this.plugins.get(id) ?? this.plugins.get(resolveDependencyId(id));
   }
 
-  public register(plugin: IPlugin) {
+  public register(pluginOrClass: IPlugin | (new (...args: any[]) => IPlugin)) {
+    const plugin: IPlugin =
+      typeof pluginOrClass === "function" ? new pluginOrClass() : pluginOrClass;
+
     if (this.plugins.has(plugin.manifest.id)) {
       // return;
     }
 
     this.plugins.set(plugin.manifest.id, plugin);
 
-    // Rekurencyjna rejestracja wtyczek zależnych
+    // Recursive registration of nested plugins
     if (plugin.plugins && Array.isArray(plugin.plugins)) {
       for (const nested of plugin.plugins) {
         this.register(nested);
@@ -233,8 +325,12 @@ export class PluginRegistry {
 
             if (!status.installed) {
               await this.updateStep(plugin.manifest.id, "Installing...");
-              if (plugin.onMigrate) await plugin.onMigrate();
-              if (plugin.onEnable) await plugin.onEnable();
+              if (plugin.onMigrate) {
+                await this.iocContainer.call(plugin, "onMigrate");
+              }
+              if (plugin.onEnable) {
+                await this.iocContainer.call(plugin, "onEnable");
+              }
 
               await this.updateStatus(plugin.manifest.id, {
                 installed: true,
@@ -242,7 +338,9 @@ export class PluginRegistry {
               });
             }
 
-            if (plugin.init) await plugin.init();
+            if (plugin.init) {
+              await this.invokePluginInit(plugin);
+            }
           }
         }
 
@@ -292,8 +390,17 @@ export class PluginRegistry {
 
         return {
           ...p.manifest,
-          enabled: dbp?.enabled ?? memStatus?.enabled ?? false,
-          installed: dbp?.installed ?? memStatus?.installed ?? false,
+          enabled:
+            dbp?.enabled ??
+            memStatus?.enabled ??
+            p.manifest.enabled ??
+            p.manifest.system ??
+            false,
+          installed:
+            dbp?.installed ??
+            memStatus?.installed ??
+            p.manifest.system ??
+            false,
           lastStep: memStatus?.lastStep ?? dbp?.lastStep ?? null,
         };
       });
@@ -303,8 +410,9 @@ export class PluginRegistry {
         const status = this.pluginStatus.get(p.manifest.id);
         return {
           ...p.manifest,
-          enabled: status?.enabled ?? false,
-          installed: status?.installed ?? false,
+          enabled:
+            status?.enabled ?? p.manifest.enabled ?? p.manifest.system ?? false,
+          installed: status?.installed ?? p.manifest.system ?? false,
           lastStep: status?.lastStep ?? null,
         };
       });
@@ -361,74 +469,23 @@ export class PluginRegistry {
     includeDisabled = false,
     context?: { roles?: string[]; permissions?: string[] },
   ) {
-    const extensions = [];
-    const pluginsToScan = includeDisabled
-      ? this.getPlugins()
-      : this.getEnabledPlugins();
-
-    for (const plugin of pluginsToScan) {
-      if (plugin.extensions) {
-        extensions.push(
-          ...plugin.extensions.filter((e) => {
-            if (e.target !== target || e.point !== point) return false;
-            if (context) {
-              const userRoles = context.roles || [];
-              const userPermissions = context.permissions || [];
-              if (e.roles && e.roles.length > 0) {
-                if (!e.roles.some((role) => userRoles.includes(role))) {
-                  return false;
-                }
-              }
-              if (e.permissions && e.permissions.length > 0) {
-                if (
-                  !e.permissions.every((perm) => userPermissions.includes(perm))
-                ) {
-                  return false;
-                }
-              }
-            }
-            return true;
-          }),
-        );
-      }
-    }
-    // Items without priority default to 100 to appear later
-    return extensions.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+    const extensionService = await this.resolveExtensionService();
+    if (!extensionService) return [];
+    return extensionService.getExtensions(
+      target,
+      point,
+      includeDisabled,
+      context,
+    );
   }
 
   public async getWidgets(
     area: string,
     context?: { roles?: string[]; permissions?: string[] },
   ) {
-    const widgets = [];
-    for (const plugin of this.getEnabledPlugins()) {
-      if (plugin.widgets) {
-        widgets.push(
-          ...plugin.widgets.filter((w) => {
-            if (w.area !== area) return false;
-            if (context) {
-              const userRoles = context.roles || [];
-              const userPermissions = context.permissions || [];
-              if (w.roles && w.roles.length > 0) {
-                if (!w.roles.some((role) => userRoles.includes(role))) {
-                  return false;
-                }
-              }
-              if (w.permissions && w.permissions.length > 0) {
-                if (
-                  !w.permissions.every((perm) => userPermissions.includes(perm))
-                ) {
-                  return false;
-                }
-              }
-            }
-            return true;
-          }),
-        );
-      }
-    }
-    // Items without priority default to 100 to appear later
-    return widgets.sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
+    const widgetService = await this.resolveWidgetService();
+    if (!widgetService) return [];
+    return widgetService.getWidgets(area, context);
   }
 
   private async delay(ms = 500) {
@@ -452,7 +509,7 @@ export class PluginRegistry {
     const currentStatus = this.pluginStatus.get(id);
     if (currentStatus?.enabled === enabled) return;
 
-    // Zapobieganie nieskończonej rekurencji (cyklom zależności)
+    // Prevent infinite recursion (dependency cycles)
     if (this.processingPlugins.has(id)) {
       return;
     }
@@ -468,7 +525,7 @@ export class PluginRegistry {
         await this.delay();
         const dependencies = plugin.manifest.dependencies || [];
 
-        // 2. Aktywacja pluginów wymaganych
+        // 2. Activate required dependencies
         for (const depId of dependencies) {
           const depPlugin = this.findPlugin(depId);
           const canonicalDepId =
@@ -498,7 +555,7 @@ export class PluginRegistry {
         if (plugin.onEnable) {
           await this.updateStep(id, "Running the onEnable hook...");
           await this.delay();
-          await plugin.onEnable(context);
+          await this.iocContainer.call(plugin, "onEnable", context);
         }
 
         // 5. Finally, we turn on the plugin
@@ -538,7 +595,7 @@ export class PluginRegistry {
         if (plugin.onDisable) {
           await this.updateStep(id, "Running onDisable hook...");
           await this.delay();
-          await plugin.onDisable();
+          await this.iocContainer.call(plugin, "onDisable");
         }
 
         // 3. Run the rollback migrations
@@ -558,6 +615,12 @@ export class PluginRegistry {
 
         // 4. Disable the plugin itself
         await this.updateStatus(id, { enabled: false, lastStep: null });
+        const menuService = await this.resolveMenuService();
+        menuService?.clearPlugin(id);
+        const widgetService = await this.resolveWidgetService();
+        widgetService?.clearPlugin(id);
+        const extensionService = await this.resolveExtensionService();
+        extensionService?.clearPlugin(id);
         await this.delay();
 
         // 5. Finally, proceed to deactivate unused dependencies
@@ -596,7 +659,9 @@ export class PluginRegistry {
       }
 
       // Important: init() is only called if we are ENABLING
-      if (enabled && plugin.init) await plugin.init();
+      if (enabled && plugin.init) {
+        await this.invokePluginInit(plugin);
+      }
 
       // Ensure lastStep is cleared at the end of a SUCCESSFUL toggle
       await this.updateStep(id, null);
@@ -635,17 +700,9 @@ export class PluginRegistry {
   }
 
   public async hasExtension(target: string, point?: string): Promise<boolean> {
-    for (const plugin of this.getEnabledPlugins()) {
-      if (plugin.extensions) {
-        if (
-          plugin.extensions.some(
-            (e) => e.target === target && (point ? e.point === point : true),
-          )
-        )
-          return true;
-      }
-    }
-    return false;
+    const extensionService = await this.resolveExtensionService();
+    if (!extensionService) return false;
+    return extensionService.hasExtension(target, point);
   }
 
   public async getConfig<T>(id: string): Promise<T | null> {

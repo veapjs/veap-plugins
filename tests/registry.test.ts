@@ -1,13 +1,20 @@
-import type { IEventBus, ILogger } from "@veap/kernel";
+import { Container, type IEventBus, type ILogger, Inject } from "@veap/kernel";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IPlugin } from "../src/common";
-import { bindPluginsContext } from "../src/common";
+import {
+  bindPluginsContext,
+  EXTENSION_SERVICE,
+  MENU_SERVICE,
+  WIDGET_SERVICE,
+} from "../src/common";
+import { MenuService } from "../src/navigation";
 import type {
   IMigrationRunner,
   IPluginRepository,
   PluginRecord,
 } from "../src/registry";
 import { applyPluginFilters, PluginRegistry } from "../src/registry";
+import { ExtensionService, WidgetService } from "../src/widgets";
 
 class InMemoryPluginRepository implements IPluginRepository {
   public records = new Map<string, PluginRecord>();
@@ -151,31 +158,92 @@ describe("PluginRegistry", () => {
     expect(record?.enabled).toBe(false);
   });
 
-  it("resolves extensions from enabled plugins", async () => {
+  it("registers extensions via ExtensionService injected into plugin.init() and clears them when disabled", async () => {
+    const ioc = new Container();
+    const customRegistry = new PluginRegistry(
+      repository,
+      runner,
+      mockLogger,
+      mockEventBus,
+      ioc,
+    );
+    const extensionService = new ExtensionService(customRegistry);
+
+    ioc.register({
+      token: ExtensionService,
+      useValue: extensionService,
+      singleton: true,
+    });
+    ioc.register({
+      token: EXTENSION_SERVICE,
+      useValue: extensionService,
+      singleton: true,
+    });
+
     const dummyComponent = () => "Dummy";
-    const plugin: IPlugin = {
-      manifest: {
+    const adminComponent = () => "AdminButton";
+
+    class ExtPlugin implements IPlugin {
+      manifest = {
         id: "ext-plugin",
         name: "Ext Plugin",
         version: "1.0.0",
         description: "Ext",
-      },
-      extensions: [
-        {
-          id: "header-button",
-          target: "core",
-          point: "header",
-          component: dummyComponent as any,
-        },
-      ],
-    };
+      };
 
-    registry.register(plugin);
-    await registry.init();
+      async init(
+        @Inject(ExtensionService) extensions: ExtensionService,
+      ): Promise<void> {
+        extensions.register([
+          {
+            id: "admin-header-button",
+            target: "core",
+            point: "header",
+            component: adminComponent as any,
+            priority: 20,
+            roles: ["admin"],
+          },
+          {
+            id: "header-button",
+            target: "core",
+            point: "header",
+            component: dummyComponent as any,
+            priority: 5,
+          },
+        ]);
+      }
+    }
 
-    const extensions = await registry.getExtensions("core", "header");
-    expect(extensions).toHaveLength(1);
-    expect(extensions[0].id).toBe("header-button");
+    customRegistry.register(new ExtPlugin());
+    await customRegistry.init();
+
+    expect(await customRegistry.hasExtension("core", "header")).toBe(true);
+
+    const guestExtensions = await customRegistry.getExtensions(
+      "core",
+      "header",
+      false,
+      { roles: ["user"], permissions: [] },
+    );
+    expect(guestExtensions).toHaveLength(1);
+    expect(guestExtensions[0].id).toBe("header-button");
+
+    const adminExtensions = await customRegistry.getExtensions(
+      "core",
+      "header",
+      false,
+      { roles: ["admin"], permissions: [] },
+    );
+    expect(adminExtensions.map((e) => e.id)).toEqual([
+      "header-button",
+      "admin-header-button",
+    ]);
+
+    await customRegistry.togglePlugin("ext-plugin", false);
+    expect(await customRegistry.hasExtension("core", "header")).toBe(false);
+    expect(await customRegistry.getExtensions("core", "header")).toHaveLength(
+      0,
+    );
   });
 
   it("applies filters through plugin hooks", async () => {
@@ -204,5 +272,250 @@ describe("PluginRegistry", () => {
 
     const result = await applyPluginFilters("filter:title", "Initial");
     expect(result).toBe("Initial - Filtered");
+  });
+
+  it("injects IoC services via @Inject into plugin lifecycle methods (init, onEnable, onDisable)", async () => {
+    const ioc = new Container();
+
+    class FakeAuthService {
+      getProviderName() {
+        return "veap-auth";
+      }
+    }
+
+    ioc.register({
+      token: FakeAuthService,
+      useClass: FakeAuthService,
+      singleton: true,
+    });
+
+    const injectedCalls: string[] = [];
+
+    class InjectablePlugin implements IPlugin {
+      manifest = {
+        id: "injectable-plugin",
+        name: "Injectable Plugin",
+        version: "1.0.0",
+        description: "Tests method injection",
+      };
+
+      async init(
+        @Inject(FakeAuthService) authService: FakeAuthService,
+      ): Promise<void> {
+        injectedCalls.push(`init:${authService.getProviderName()}`);
+      }
+
+      async onEnable(
+        @Inject(FakeAuthService) authService: FakeAuthService,
+        context?: { source?: string },
+      ): Promise<void> {
+        injectedCalls.push(
+          `onEnable:${authService.getProviderName()}:${context?.source ?? "none"}`,
+        );
+      }
+
+      async onDisable(
+        @Inject(FakeAuthService) authService: FakeAuthService,
+      ): Promise<void> {
+        injectedCalls.push(`onDisable:${authService.getProviderName()}`);
+      }
+    }
+
+    const customRegistry = new PluginRegistry(
+      repository,
+      runner,
+      mockLogger,
+      mockEventBus,
+      ioc,
+    );
+
+    customRegistry.register(new InjectablePlugin());
+    await customRegistry.init();
+
+    expect(injectedCalls).toEqual(["init:veap-auth"]);
+
+    await customRegistry.togglePlugin("injectable-plugin", false);
+    expect(injectedCalls).toContain("onDisable:veap-auth");
+
+    await customRegistry.togglePlugin("injectable-plugin", true, {
+      source: "panel",
+    });
+    expect(injectedCalls).toContain("onEnable:veap-auth:panel");
+  });
+
+  it("registers navigation via MenuService injected into plugin.init() and clears it when disabled", async () => {
+    const ioc = new Container();
+    const customRegistry = new PluginRegistry(
+      repository,
+      runner,
+      mockLogger,
+      mockEventBus,
+      ioc,
+    );
+    const menuService = new MenuService(customRegistry, {
+      get: async () => ({ privatePath: "/veap" }) as any,
+    });
+
+    ioc.register({
+      token: MenuService,
+      useValue: menuService,
+      singleton: true,
+    });
+    ioc.register({
+      token: MENU_SERVICE,
+      useValue: menuService,
+      singleton: true,
+    });
+
+    class BlogNavPlugin implements IPlugin {
+      manifest = {
+        id: "blog-nav",
+        name: "Blog Nav",
+        version: "1.0.0",
+        description: "Registers blog navigation",
+      };
+
+      async init(@Inject(MenuService) menu: MenuService): Promise<void> {
+        menu.addPublicItem({
+          id: "blog-home",
+          title: "Blog",
+          url: "/blog",
+          priority: 10,
+        });
+        menu.addAdminItem("content", {
+          id: "blog-posts",
+          title: "Posts",
+          url: "/blog/posts",
+          priority: 20,
+        });
+        menu.addSettingsItem("blog-settings", {
+          id: "blog-seo",
+          title: "SEO",
+          url: "/settings/blog-seo",
+          priority: 30,
+        });
+      }
+    }
+
+    customRegistry.register(new BlogNavPlugin());
+    await customRegistry.init();
+
+    const publicItems = await menuService.getPublicNavigation();
+    expect(publicItems).toHaveLength(1);
+    expect(publicItems[0]).toMatchObject({
+      id: "blog-home",
+      title: "Blog",
+      url: "/blog",
+    });
+
+    const adminGroups = await menuService.getVeapNavigationGrouped("admin");
+    expect(adminGroups.content).toHaveLength(1);
+    expect(adminGroups.content[0]).toMatchObject({
+      id: "blog-posts",
+      title: "Posts",
+      url: "/veap/blog/posts",
+    });
+
+    const settingsGroups =
+      await menuService.getVeapNavigationGrouped("settings");
+    expect(settingsGroups["blog-settings"]).toHaveLength(1);
+    expect(settingsGroups["blog-settings"][0]).toMatchObject({
+      id: "blog-seo",
+      title: "SEO",
+      url: "/veap/settings/blog-seo",
+    });
+
+    // Disabling the plugin should automatically clear its navigation items
+    await customRegistry.togglePlugin("blog-nav", false);
+
+    expect(await menuService.getPublicNavigation()).toHaveLength(0);
+    expect(await menuService.getVeapNavigationGrouped("admin")).toEqual({});
+    expect(await menuService.getVeapNavigationGrouped("settings")).toEqual({});
+  });
+
+  it("registers widgets via WidgetService injected into plugin.init() and clears them when disabled", async () => {
+    const ioc = new Container();
+    const customRegistry = new PluginRegistry(
+      repository,
+      runner,
+      mockLogger,
+      mockEventBus,
+      ioc,
+    );
+    const widgetService = new WidgetService(customRegistry);
+
+    ioc.register({
+      token: WidgetService,
+      useValue: widgetService,
+      singleton: true,
+    });
+    ioc.register({
+      token: WIDGET_SERVICE,
+      useValue: widgetService,
+      singleton: true,
+    });
+
+    const DummyStatsWidget = () => "Stats";
+    const DummyAdminWidget = () => "AdminOnly";
+
+    class DashboardWidgetsPlugin implements IPlugin {
+      manifest = {
+        id: "dashboard-widgets",
+        name: "Dashboard Widgets",
+        version: "1.0.0",
+        description: "Registers dashboard widgets",
+      };
+
+      async init(@Inject(WidgetService) widgets: WidgetService): Promise<void> {
+        widgets.register([
+          {
+            id: "admin-metrics",
+            name: "Admin Metrics",
+            area: "dashboard-stats",
+            component: DummyAdminWidget as any,
+            priority: 20,
+            roles: ["admin"],
+          },
+          {
+            id: "public-welcome",
+            name: "Welcome",
+            area: "dashboard-stats",
+            component: DummyStatsWidget as any,
+            priority: 5,
+          },
+        ]);
+      }
+    }
+
+    customRegistry.register(new DashboardWidgetsPlugin());
+    await customRegistry.init();
+
+    // Without admin role, only the unrestricted widget is returned
+    const guestWidgets = await widgetService.getWidgets("dashboard-stats", {
+      roles: ["user"],
+      permissions: [],
+    });
+    expect(guestWidgets).toHaveLength(1);
+    expect(guestWidgets[0].id).toBe("public-welcome");
+
+    // With admin role, both widgets are returned sorted by priority (5 then 20)
+    const adminWidgets = await widgetService.getWidgets("dashboard-stats", {
+      roles: ["admin"],
+      permissions: [],
+    });
+    expect(adminWidgets.map((w) => w.id)).toEqual([
+      "public-welcome",
+      "admin-metrics",
+    ]);
+
+    // Disabling the plugin clears its widgets
+    await customRegistry.togglePlugin("dashboard-widgets", false);
+
+    expect(
+      await widgetService.getWidgets("dashboard-stats", {
+        roles: ["admin"],
+        permissions: [],
+      }),
+    ).toHaveLength(0);
   });
 });

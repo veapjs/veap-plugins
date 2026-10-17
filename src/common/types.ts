@@ -232,14 +232,11 @@ export interface IPlugin {
   locales?: Record<string, () => Promise<{ default: any }>>;
   manifest: PluginManifest;
   migrations?: any[];
-  init?: () => Promise<void> | void;
-  onMigrate?: () => Promise<void> | void;
-  onEnable?: (context?: any) => Promise<void> | void;
-  onDisable?: () => Promise<void> | void;
+  init?: (...args: any[]) => Promise<void> | void;
+  onMigrate?: (...args: any[]) => Promise<void> | void;
+  onEnable?: (...args: any[]) => Promise<void> | void;
+  onDisable?: (...args: any[]) => Promise<void> | void;
   hooks?: PluginHook[];
-  extensions?: PluginExtension[];
-  widgets?: PluginWidget[];
-  navigation?: PluginNavigation;
   plugins?: IPlugin[];
 
   /**

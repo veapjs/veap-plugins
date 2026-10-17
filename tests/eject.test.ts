@@ -9,15 +9,6 @@ vi.mock("node:child_process", () => ({
   execSync: vi.fn(),
 }));
 
-vi.mock("ora", () => ({
-  default: () => ({
-    start: () => ({
-      succeed: vi.fn(),
-      fail: vi.fn(),
-    }),
-  }),
-}));
-
 describe("ejectPackage CLI", () => {
   let tmpDir: string;
   let originalCwd: string;

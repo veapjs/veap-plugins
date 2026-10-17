@@ -29,6 +29,10 @@ export {
 export * from "./router";
 // UI (Server versions)
 export {
+  ExtensionService,
+  getPluginExtensions,
+} from "./widgets/extension.service";
+export {
   ExtensionPoint,
   PluginExtensionPoint,
 } from "./widgets/plugin-extension-point";
@@ -36,4 +40,5 @@ export {
   PluginWidgetArea,
   WidgetArea,
 } from "./widgets/plugin-widget-area";
+export { getPluginWidgets, WidgetService } from "./widgets/widget.service";
 export { WidgetComposer } from "./widgets/widget-composer";

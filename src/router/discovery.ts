@@ -1,7 +1,7 @@
 import { app } from "@veap/kernel";
 import { cache } from "react";
-import { matchRoute } from "./matcher";
-import { RouterService } from "./router.service";
+import { matchRoute } from "./matcher.js";
+import { RouterService } from "./router.service.js";
 
 export { matchRoute };
 

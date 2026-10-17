@@ -1,9 +1,9 @@
-import { SystemPlugin } from "../models/SystemPlugin";
+import { SystemPlugin } from "../models/SystemPlugin.js";
 import type {
   IPluginRepository,
   PluginStatusRecord,
   UpsertPluginStatusRecord,
-} from "./contracts";
+} from "./contracts.js";
 
 /**
  * `IPluginRepository` adapter backed by the `SystemPlugin` ActiveRecord model

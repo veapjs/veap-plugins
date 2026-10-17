@@ -1,8 +1,8 @@
 import { getCurrentSession } from "@veap/auth";
 import type React from "react";
-import { getUserWidgetsState } from "../actions/index";
-import { pluginsContext } from "../common/context";
-import { WidgetComposerClient } from "./widget-composer-client";
+import { getUserWidgetsState } from "../actions/index.js";
+import { pluginsContext } from "../common/context.js";
+import { WidgetComposerClient } from "./widget-composer-client.js";
 
 interface WidgetComposerProps {
   slot: string;

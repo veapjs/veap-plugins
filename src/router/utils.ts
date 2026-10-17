@@ -1,6 +1,6 @@
 import type { UserPermission, UserRole } from "@veap/auth";
-import type { ApiMiddleware, VeapMiddleware } from "../common/types";
-import type { LayoutChainEntry, MatchResult } from "./route-tree";
+import type { ApiMiddleware, VeapMiddleware } from "../common/types.js";
+import type { LayoutChainEntry, MatchResult } from "./route-tree.js";
 
 export function collectMiddlewares(
   chain: LayoutChainEntry[],

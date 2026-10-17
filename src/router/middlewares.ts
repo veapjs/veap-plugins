@@ -10,7 +10,7 @@ import type {
   ApiMiddleware,
   VeapMiddleware,
   VeapMiddlewareContext,
-} from "../common/types";
+} from "../common/types.js";
 
 export const EnsuredGuest: VeapMiddleware = async (ctx, next) => {
   const { user, session } = await getCurrentSession();

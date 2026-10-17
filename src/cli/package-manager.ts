@@ -50,7 +50,7 @@ export function detectPackageManager(dir: string): PackageManager {
 
   const found = LOCKFILES.filter((l) => fs.existsSync(path.join(dir, l.file)));
   if (found.length > 0) {
-    return found.find((l) => l.pm === "pnpm")?.pm ?? found[0].pm;
+    return found.find((l) => l.pm === "pnpm")?.pm ?? found[0]!.pm;
   }
 
   return "pnpm";
@@ -67,7 +67,7 @@ export function applyDockerfileForPackageManager(
 ): void {
   if (pm === "pnpm") return;
   try {
-    // Stubs live at the package root of the installed @veap/framework.
+    // Stubs live at the package root of the installed @veap/plugins.
     const variantPath = stubPath("docker", `Dockerfile.${pm}.stub`);
     const dockerfilePath = path.join(projectDir, "Dockerfile");
     if (!fs.existsSync(variantPath) || !fs.existsSync(dockerfilePath)) return;

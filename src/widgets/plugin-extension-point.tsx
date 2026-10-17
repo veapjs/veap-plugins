@@ -1,6 +1,6 @@
 import { getCurrentSession } from "@veap/auth";
 import type React from "react";
-import { isPluginsContextBound, pluginsContext } from "../common/context";
+import { isPluginsContextBound, pluginsContext } from "../common/context.js";
 
 export interface PluginExtensionPointProps {
   target: string;
@@ -25,11 +25,13 @@ export async function PluginExtensionPoint({
   as: Container,
   includeDisabled = false,
 }: PluginExtensionPointProps) {
-  const g = globalThis as any;
-  if (g.__VEAP_BOOTSTRAPPING_PROMISE__) {
-    try {
-      await g.__VEAP_BOOTSTRAPPING_PROMISE__;
-    } catch {}
+  if (!isPluginsContextBound()) {
+    const g = globalThis as any;
+    if (g.__VEAP_BOOTSTRAPPING_PROMISE__) {
+      try {
+        await g.__VEAP_BOOTSTRAPPING_PROMISE__;
+      } catch {}
+    }
   }
 
   const fallbackContent = (children ?? fallback ?? null) as React.ReactNode;

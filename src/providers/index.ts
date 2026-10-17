@@ -4,4 +4,4 @@ export {
   PluginsServiceProvider,
   type RouterConfig,
   RouterServiceProvider,
-} from "./plugins.provider";
+} from "./plugins.provider.js";

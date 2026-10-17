@@ -24,7 +24,7 @@ import { Grip, Trash, UnfoldHorizontal, UnfoldVertical } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { saveUserWidgetsState } from "../actions/index";
+import { saveUserWidgetsState } from "../actions/index.js";
 
 interface WidgetState {
   id: string;

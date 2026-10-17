@@ -1,6 +1,6 @@
-import type { IPlugin } from "../common";
-import { pluginsContext } from "../common";
-import { PluginRegistry } from "./registry.service";
+import type { IPlugin } from "../common/index.js";
+import { pluginsContext } from "../common/index.js";
+import { PluginRegistry } from "./registry.service.js";
 
 /**
  * Module-level helpers over the {@link PluginRegistry}.

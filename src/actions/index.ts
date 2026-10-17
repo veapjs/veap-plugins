@@ -3,4 +3,4 @@ export {
   getPluginWidgetsAction,
   getUserWidgetsState,
   saveUserWidgetsState,
-} from "./plugin.actions";
+} from "./plugin.actions.js";

@@ -107,7 +107,7 @@ export interface VeapPackageJson {
  * @example
  * ```ts
  * import pkg from "../package.json" with { type: "json" };
- * import { createManifestFromPackageJson } from "@veap/framework/plugins";
+ * import { createManifestFromPackageJson } from "@veap/plugins";
  * const manifest = createManifestFromPackageJson(pkg);
  * ```
  */
@@ -253,7 +253,7 @@ export interface IPlugin {
    * const plugin: IPlugin = {
    *   manifest,
    *   routeTree: async () => {
-   *     const { discoverRoutes } = await import("@veap/framework/router");
+   *     const { discoverRoutes } = await import("@veap/plugins/router");
    *     const path = await import("path");
    *     const appDir = path.join(process.cwd(), "plugins", "my-plugin", "src", "app");
    *     return discoverRoutes(appDir, (relPath) => import(`../src/app/${relPath}`));

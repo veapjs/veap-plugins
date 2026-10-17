@@ -1,12 +1,12 @@
 import { eventBus } from "@veap/kernel/events";
 
 import * as React from "react";
-import type { VeapMiddlewareContext } from "../../common/types";
-import { EnsuredAuth, runPipeline, SkipSecurity } from "../middlewares";
-import type { MatchResult, RouteNode, RouteTree } from "../route-tree";
-import { collectAuthRequirements, collectMiddlewares } from "../utils";
-import { RouterErrorBoundary } from "./error-boundary";
-import { SoftNavigationInterceptor } from "./soft-navigation";
+import type { VeapMiddlewareContext } from "../../common/types.js";
+import { EnsuredAuth, runPipeline, SkipSecurity } from "../middlewares.js";
+import type { MatchResult, RouteNode, RouteTree } from "../route-tree.js";
+import { collectAuthRequirements, collectMiddlewares } from "../utils.js";
+import { RouterErrorBoundary } from "./error-boundary.js";
+import { SoftNavigationInterceptor } from "./soft-navigation.js";
 
 // ---------------------------------------------------------------------------
 // Parallel slot resolution

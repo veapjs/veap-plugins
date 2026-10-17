@@ -1,5 +1,5 @@
 import { runMigrations } from "@veap/database";
-import * as m0001 from "./0001_create_plugins_tables";
+import * as m0001 from "./0001_create_plugins_tables.js";
 
 export const pluginMigrations = [m0001];
 

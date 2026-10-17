@@ -1,9 +1,9 @@
 import { AppError } from "@veap/kernel";
-import type { MenuService } from "../navigation/navigation.service";
-import type { PluginRegistry } from "../registry/registry.service";
-import type { RouterService } from "../router/router.service";
-import type { ExtensionService } from "../widgets/extension.service";
-import type { WidgetService } from "../widgets/widget.service";
+import type { MenuService } from "../navigation/navigation.service.js";
+import type { PluginRegistry } from "../registry/registry.service.js";
+import type { RouterService } from "../router/router.service.js";
+import type { ExtensionService } from "../widgets/extension.service.js";
+import type { WidgetService } from "../widgets/widget.service.js";
 
 /**
  * Typed boundary between the plugins use cases and the modules that consume

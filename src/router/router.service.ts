@@ -7,9 +7,9 @@ import {
   Injectable,
 } from "@veap/kernel";
 import type * as React from "react";
-import { NavigationService } from "../navigation/navigation.service";
-import { PluginRegistry } from "../registry";
-import { RouteTree, resolveMagicPrefix } from "./route-tree";
+import { NavigationService } from "../navigation/navigation.service.js";
+import { PluginRegistry } from "../registry/index.js";
+import { RouteTree, resolveMagicPrefix } from "./route-tree.js";
 
 @Injectable()
 export class RouterService {

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { logger } from "@veap/kernel";
-import type { RouteNode } from "./route-tree";
+import type { RouteNode } from "./route-tree.js";
 
 const debug = (msg: string, ...args: any[]) =>
   logger.debug("veap:scanner", msg, ...args);

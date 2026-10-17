@@ -1,2 +1,2 @@
-export * from "./SystemPlugin";
-export * from "./SystemUserWidget";
+export * from "./SystemPlugin.js";
+export * from "./SystemUserWidget.js";

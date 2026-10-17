@@ -1,8 +1,8 @@
 import { authContext } from "@veap/auth";
 import { Inject, Injectable } from "@veap/kernel";
-import { pluginsContext } from "../common/context";
-import type { PluginWidget } from "../common/types";
-import { PluginRegistry } from "../registry";
+import { pluginsContext } from "../common/context.js";
+import type { PluginWidget } from "../common/types.js";
+import { PluginRegistry } from "../registry/index.js";
 
 interface WidgetEntry {
   pluginId?: string;

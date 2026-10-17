@@ -52,7 +52,7 @@ import type {
   ApiMiddleware,
   BreadcrumbValue,
   VeapMiddleware,
-} from "../common/types";
+} from "../common/types.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

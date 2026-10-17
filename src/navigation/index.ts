@@ -1,4 +1,4 @@
-export { getPluginBreadcrumbs } from "./breadcrumbs";
+export { getPluginBreadcrumbs } from "./breadcrumbs.js";
 export {
   getPathPrefix,
   getPluginNavigation,
@@ -7,4 +7,4 @@ export {
   getVeapPluginNavigationGrouped,
   MenuService,
   NavigationService,
-} from "./navigation.service";
+} from "./navigation.service.js";

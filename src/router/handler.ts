@@ -1,6 +1,6 @@
-import { ApiEnsuredAuth, runApiPipeline } from "./middlewares";
-import type { RouteTree } from "./route-tree";
-import { collectApiMiddlewares, collectAuthRequirements } from "./utils";
+import { ApiEnsuredAuth, runApiPipeline } from "./middlewares.js";
+import type { RouteTree } from "./route-tree.js";
+import { collectApiMiddlewares, collectAuthRequirements } from "./utils.js";
 
 export async function handleVeapApiRequest(
   request: Request,

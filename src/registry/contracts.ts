@@ -1,4 +1,4 @@
-import type { IPlugin } from "../common";
+import type { IPlugin } from "../common/index.js";
 
 /**
  * Persisted status of a plugin (mirrors the `plugins` table).

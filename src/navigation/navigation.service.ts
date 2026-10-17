@@ -5,14 +5,14 @@ import {
   type IVeapConfigProvider,
   VEAP_CONFIG,
 } from "@veap/kernel";
-import { pluginsContext } from "../common/context";
+import { pluginsContext } from "../common/context.js";
 import type {
   PluginNavElement,
   PluginNavigation,
   PluginNavigationGroupDefinition,
   PluginNavigationGroupMap,
-} from "../common/types";
-import { PluginRegistry } from "../registry";
+} from "../common/types.js";
+import { PluginRegistry } from "../registry/index.js";
 
 function filterNavItem(
   item: PluginNavElement,

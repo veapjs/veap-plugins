@@ -5,12 +5,12 @@ import type {
   BreadcrumbValue,
   PluginNavElement,
   PluginPageProps,
-} from "../common/types";
-import { buildRouteTree } from "../router/discovery";
+} from "../common/types.js";
+import { buildRouteTree } from "../router/discovery.js";
 import {
   getPluginNavigation,
   getVeapPluginNavigationGrouped,
-} from "./navigation.service";
+} from "./navigation.service.js";
 
 async function resolveBreadcrumb(
   value: BreadcrumbValue,

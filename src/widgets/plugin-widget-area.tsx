@@ -1,6 +1,6 @@
 import { getCurrentSession } from "@veap/auth";
 import type React from "react";
-import { pluginsContext } from "../common/context";
+import { pluginsContext } from "../common/context.js";
 
 interface PluginWidgetAreaProps {
   area: string;

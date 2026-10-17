@@ -2,8 +2,8 @@
 
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-import { getPluginExtensionsAction } from "../actions/index";
-import { onPluginsChanged } from "../common/events";
+import { getPluginExtensionsAction } from "../actions/index.js";
+import { onPluginsChanged } from "../common/events.js";
 
 export interface PluginExtensionPointClientProps {
   target: string;

@@ -2,8 +2,8 @@
 
 import { getCurrentSession } from "@veap/auth";
 import { AppError } from "@veap/kernel";
-import { pluginsContext } from "../common/context";
-import { SystemUserWidget } from "../models/SystemUserWidget";
+import { pluginsContext } from "../common/context.js";
+import { SystemUserWidget } from "../models/SystemUserWidget.js";
 
 export async function getPluginExtensionsAction(
   target: string,

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@veap/kernel";
-import { pluginsContext } from "../common/context";
-import type { PluginExtension } from "../common/types";
-import { PluginRegistry } from "../registry";
+import { pluginsContext } from "../common/context.js";
+import type { PluginExtension } from "../common/types.js";
+import { PluginRegistry } from "../registry/index.js";
 
 interface ExtensionEntry {
   pluginId?: string;

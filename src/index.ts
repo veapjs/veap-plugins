@@ -1,4 +1,3 @@
-export * from "./cli/index.js";
 export * from "./common/index.js";
 export * from "./composition.js";
 export * from "./migrations/index.js";

@@ -1,7 +1,7 @@
 import { app, type IHttpRequestContext, REQUEST_CONTEXT } from "@veap/kernel";
 import * as React from "react";
-import { buildRouteTree } from "../discovery";
-import { VeapRouter } from "./renderer";
+import { buildRouteTree } from "../discovery.js";
+import { VeapRouter } from "./renderer.js";
 
 /**
  * A Higher-Order Component (HOC) that wraps a physical Next.js page component

@@ -1,5 +1,5 @@
 import { rollbackMigrations, runMigrations } from "@veap/database";
-import type { IMigrationRunner } from "./contracts";
+import type { IMigrationRunner } from "./contracts.js";
 
 /**
  * `IMigrationRunner` adapter delegating to the knex-based migration runner.

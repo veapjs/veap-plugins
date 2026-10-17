@@ -14,17 +14,17 @@ import {
   type IPlugin,
   MENU_SERVICE,
   WIDGET_SERVICE,
-} from "../common";
-import type { MenuService } from "../navigation/navigation.service";
-import type { ExtensionService } from "../widgets/extension.service";
-import type { WidgetService } from "../widgets/widget.service";
+} from "../common/index.js";
+import type { MenuService } from "../navigation/navigation.service.js";
+import type { ExtensionService } from "../widgets/extension.service.js";
+import type { WidgetService } from "../widgets/widget.service.js";
 import {
   type IMigrationRunner,
   type IPluginRepository,
   MIGRATION_RUNNER,
   PLUGIN_REPOSITORY,
   type PluginRuntimeStatus,
-} from "./contracts";
+} from "./contracts.js";
 
 /**
  * Normalizes an npm dependency string (e.g. "@veap/media-plugin") to a registered plugin id (e.g. "media-plugin").
@@ -723,7 +723,7 @@ export class PluginRegistry {
 
 // ─── Backwards-compatible re-exports ─────────────────────────────────────────
 // The implementations live in `facade.ts`; this keeps
-// `export * from "../application/plugins/registry"` in the entry barrels
+// `export * from "../application/plugins/registry.js"` in the entry barrels
 // working for all module-level helpers.
 export {
   applyPluginFilters,
@@ -736,4 +736,4 @@ export {
   registerPlugins,
   togglePluginState,
   updatePluginConfig,
-} from "./facade";
+} from "./facade.js";
